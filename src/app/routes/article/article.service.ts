@@ -560,6 +560,25 @@ export const deleteComment = async (id: number, userId: number) => {
 };
 
 export const favoriteArticle = async (slugPayload: string, id: number) => {
+  const existingArticle = await prisma.article.findUnique({
+    where: {
+      slug: slugPayload,
+    },
+    select: {
+      authorId: true,
+    },
+  });
+
+  if (!existingArticle) {
+    throw new HttpException(404, {});
+  }
+
+  if (existingArticle.authorId === id) {
+    throw new HttpException(403, {
+      message: 'You cannot favorite your own article',
+    });
+  }
+
   const { _count, ...article } = await prisma.article.update({
     where: {
       slug: slugPayload,
