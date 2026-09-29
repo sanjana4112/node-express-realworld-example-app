@@ -60,6 +60,8 @@ describe('ArticleService', () => {
       // When
       // @ts-ignore
       prismaMock.user.findUnique.mockResolvedValue(mockedUserResponse);
+      // @ts-expect-error mock returns only the selected authorId field
+      prismaMock.article.findUnique.mockResolvedValue({ authorId: 456 });
       // @ts-ignore
       prismaMock.article.update.mockResolvedValue(mockedArticleResponse);
 
@@ -67,6 +69,33 @@ describe('ArticleService', () => {
       await expect(favoriteArticle(slug, mockedUserResponse.id)).resolves.toHaveProperty(
         'favoritesCount',
       );
+    });
+
+    test('should throw a 403 error and not favorite if the user is the author', async () => {
+      // Given
+      const id = 123;
+      const slug = 'How-to-train-your-dragon';
+
+      // When
+      // @ts-expect-error mock returns only the selected authorId field
+      prismaMock.article.findUnique.mockResolvedValue({ authorId: id });
+
+      // Then
+      await expect(favoriteArticle(slug, id)).rejects.toHaveProperty('errorCode', 403);
+      expect(prismaMock.article.update).not.toHaveBeenCalled();
+    });
+
+    test('should throw a 404 error and not favorite if no article is found', async () => {
+      // Given
+      const id = 123;
+      const slug = 'how-to-train-your-dragon';
+
+      // When
+      prismaMock.article.findUnique.mockResolvedValue(null);
+
+      // Then
+      await expect(favoriteArticle(slug, id)).rejects.toHaveProperty('errorCode', 404);
+      expect(prismaMock.article.update).not.toHaveBeenCalled();
     });
 
     test('should throw an error if no user is found', async () => {
